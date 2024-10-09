@@ -4,46 +4,52 @@ library(highcharter)
 library(readr)
 library(writexl)
 
-# Preparing objects
+# Aumentar o tempo limite para 300 segundos (5 minutos)
+#  se tiver timeout pra instalar o h2o.
+# options(timeout = 300)
+# install.packages("h2o")
+
+# Preparando objetos
 ml <- list()
 
-# Start h2o cluster
-h2o::h2o.init()
+# Iniciar o cluster h2o
+h2o.init()
 
-# Reading the data
-ml$data$raw <- readr::read_csv(
+# Lendo os dados
+ml$data$raw <- read_csv(
   "https://raw.githubusercontent.com/wrprates/open-data/master/telco_customer_churn.csv"
 ) |>
-  dplyr::mutate(across(where(is.character), as.factor))
+  mutate(across(where(is.character), as.factor))
 
-# Defining variables
+# Definindo variáveis
 ml$vars$y <- "Churn"
 ml$vars$discard <- "customerID"
 ml$vars$x <- setdiff(names(ml$data$raw), c(ml$vars$y, ml$vars$discard))
 
-# Setup h2o
-ml$data$h2o <- h2o::as.h2o(ml$data$raw)
-ml$data$splits <- h2o::h2o.splitFrame(ml$data$h2o, ratios = 0.7)
+# Configurar h2o
+ml$data$h2o <- as.h2o(ml$data$raw)
+ml$data$splits <- h2o.splitFrame(ml$data$h2o, ratios = 0.7)
 names(ml$data$splits) <- c("train", "test")
 
-# Running the model - GBM
-ml$model <- h2o::h2o.gbm(x = ml$vars$x, y = ml$vars$y, training_frame = ml$data$splits$train)
-ml$predictions <- h2o::h2o.predict(ml$model, ml$data$splits$test)
-h2o::h2o.performance(ml$model, ml$data$splits$test)
+# Executar o modelo - GBM
+ml$model <- h2o.gbm(x = ml$vars$x, y = ml$vars$y, training_frame = ml$data$splits$train)
+ml$predictions <- h2o.predict(ml$model, ml$data$splits$test)
+h2o.performance(ml$model, ml$data$splits$test)
 
 h2o.r2(ml$model)
 
+# Adicionar as previsões aos dados originais
 ml$data$predictions <- ml$data$splits$test |>
-  tibble::as_tibble() |>
-  dplyr::bind_cols(
-    dplyr::as_tibble(ml$predictions) |> 
-      dplyr::select(Predict = predict, PredictProbability = Yes) |>
-      dplyr::mutate(PredictProbability = round(100*PredictProbability, 2))
+  as_tibble() |>
+  bind_cols(
+    as_tibble(ml$predictions) |> 
+      select(Predict = predict, PredictProbability = Yes) |>
+      mutate(PredictProbability = round(100*PredictProbability, 2))
   ) |>
-  # 11 is not a magic number, it is inverting the order of the deciles
-  dplyr::mutate(RiskGroup = as.factor(11 - dplyr::ntile(PredictProbability, 10))) |>
-  dplyr::select(customerID, Churn, Predict, PredictProbability, RiskGroup, dplyr::everything()) |>
-  dplyr::arrange(dplyr::desc(PredictProbability))
+  # 11 não é um "número mágico", é apenas inverter a ordem dos decís.
+  mutate(RiskGroup = as.factor(11 - ntile(PredictProbability, 10))) |>
+  select(customerID, Churn, Predict, PredictProbability, RiskGroup, dplyr::everything()) |>
+  arrange(desc(PredictProbability))
 
 # Exportar para Excel
-writexl::write_xlsx(ml$data$predictions, "predictions.xlsx")
+write_xlsx(ml$data$predictions, "predictions_r.xlsx")

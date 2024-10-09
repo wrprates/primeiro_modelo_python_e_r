@@ -41,14 +41,13 @@ r2 = r2_score(y_test, predictions)
 # Criando um DataFrame para armazenar as previsões e o grupo de risco
 test_df = raw_data.loc[X_test.index].copy()  # Recuperando linhas do conjunto de teste original
 test_df['Predict'] = predictions
-test_df['PredictProbability'] = np.clip(predictions, 0, None)  # Simulando probabilidades como as previsões
 
 # Criando a coluna 'RiskGroup' (decis invertidos)
-test_df['RiskGroup'] = pd.qcut(test_df['PredictProbability'], 10, labels=False, duplicates='drop')
+test_df['RiskGroup'] = pd.qcut(test_df['Predict'], 10, labels=False, duplicates='drop')
 test_df['RiskGroup'] = 11 - test_df['RiskGroup']  # Invertendo a ordem
 
 # Reorganizando colunas
-output_df = test_df[[discard, 'Churn', 'Predict', 'PredictProbability', 'RiskGroup'] + [col for col in test_df.columns if col not in [discard, 'Churn', 'Predict', 'PredictProbability', 'RiskGroup']]]
+output_df = test_df[[discard, 'Churn', 'Predict', 'RiskGroup'] + [col for col in test_df.columns if col not in [discard, 'Churn', 'Predict', 'PredictProbability', 'RiskGroup']]]
 
 # Exportando para Excel
-output_df.to_excel('predictions_sklearn.xlsx', index=False)
+output_df.to_excel('predictions_python.xlsx', index=False)

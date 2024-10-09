@@ -1,0 +1,19 @@
+# Ignorar ambiente virtual
+venv/
+
+# Ignorar arquivos de configuração do ambiente virtual
+pyvenv.cfg
+
+# Ignorar arquivos de saída e temporários
+*.xlsx
+*.pyc
+__pycache__/
+*.Rhistory
+*.RData
+
+# Ignorar arquivos de log
+*.log
+
+# Ignorar arquivos de sistema
+.DS_Store
+Thumbs.db
